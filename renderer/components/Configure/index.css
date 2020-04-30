@@ -1,0 +1,8 @@
+.ant-tabs-content {
+  flex: auto;
+  overflow: hidden;
+}
+
+div[aria-hidden=true].ant-tabs-tabpane {
+  display: none;
+}

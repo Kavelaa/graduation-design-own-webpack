@@ -1,0 +1,14 @@
+.own-icon:hover {
+  color: #1890ff;
+  transition: ease-in-out 0.3s;
+}
+
+.global-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  background-color: rgba(0, 0, 0, 0.45);
+}

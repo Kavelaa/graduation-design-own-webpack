@@ -1,0 +1,73 @@
+<root>
+  <DBItem PayLoadName="合成孔径雷达">
+    <Ins InsName="无动作指令"/>
+    <Ins InsName="对海">
+      <Byte ByteName="跳频方式" Type="Option" Value="固定">
+        <Option Val="固定"/>
+        <Option Val="帧间跳"/>
+      </Byte>
+      <Byte ByteName="方位扫描中心" Type="Range" Value="-153.6">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+    <Ins InsName="雷达辐射">
+      <Byte ByteName="扫描方式" Type="Option" Value="深度扫描">
+        <Option Val="广度扫描"/>
+        <Option Val="深度扫描"/>
+      </Byte>
+      <Byte ByteName="辐射范围" Type="Range" Value="1.8">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+      <Byte ByteName="仰角" Type="Range" Value="1.5">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+    <Ins InsName="对空">
+      <Byte ByteName="跳频方式" Type="Option" Value="帧间跳">
+        <Option Val="固定"/>
+        <Option Val="帧间跳"/>
+      </Byte>
+      <Byte ByteName="方位扫描中心" Type="Range" Value="-153">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+    <Ins InsName="声纳">
+      <Byte ByteName="扫描方式" Type="Option" Value="深度扫描">
+        <Option Val="广度扫描"/>
+        <Option Val="深度扫描"/>
+      </Byte>
+      <Byte ByteName="辐射范围" Type="Range" Value="1.8">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+      <Byte ByteName="仰角" Type="Range" Value="1.5">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+    <Ins InsName="红外">
+      <Byte ByteName="扫描方式" Type="Option" Value="广度扫描">
+        <Option Val="广度扫描"/>
+        <Option Val="深度扫描"/>
+      </Byte>
+      <Byte ByteName="辐射范围" Type="Range" Value="2.3">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+      <Byte ByteName="仰角" Type="Range" Value="1.5">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+  </DBItem>
+  <DBItem PayLoadName="test">
+    <Ins InsName="红外">
+      <Byte ByteName="扫描方式" Type="Option" Value="深度扫描">
+        <Option Val="广度扫描"/>
+        <Option Val="深度扫描"/>
+      </Byte>
+      <Byte ByteName="辐射范围" Type="Range" Value="2">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+      <Byte ByteName="仰角" Type="Range" Value="1.5">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+  </DBItem>
+</root>
