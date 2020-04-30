@@ -59,19 +59,24 @@ export default function ConfigureControl() {
           ({ key: tKey }) => tKey === key
         );
         const {
+          configPath,
           ref: { current: configure }
         } = fileObjList[fileObjIdx];
 
+        const isNewConfig = configPath !== undefined;
         const needSave = configure.needSave();
-        if (needSave)
+        if (needSave || isNewConfig) {
+          let content = needSave
+            ? "当前配置尚未保存，是否放弃保存？"
+            : "当前新建配置还未保存，是否放弃保存？";
           Modal.confirm({
-            content: "当前配置尚未保存，是否放弃保存？",
+            content,
             cancelText: "取消",
             okText: "放弃保存",
             okType: "danger",
             onOk: close
           });
-        else close();
+        } else close();
       }
     },
     [currentFileObj, setCurrentFileObj, fileObjList]

@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const {
   shell,
-  remote: { dialog }
+  remote: { dialog, getCurrentWindow }
 } = require("electron");
 const { parseStringPromise: parseStringP, Builder } = require("xml2js");
 export const md5 = require("md5");
@@ -119,9 +119,10 @@ export function openFileManager(fPath) {
  * @param {string} defaultPath 默认路径
  */
 export function openSaveDialog(defaultPath) {
+  const mainWindow = getCurrentWindow();
   globalMask.open();
   return dialog
-    .showSaveDialog({
+    .showSaveDialog(mainWindow, {
       title: "保存配置文件",
       defaultPath,
       filters: [{ name: "XML File", extensions: ["xml"] }]
@@ -133,9 +134,10 @@ export function openSaveDialog(defaultPath) {
 }
 
 export function openOpenDialog() {
+  const mainWindow = getCurrentWindow();
   globalMask.open();
   return dialog
-    .showOpenDialog({
+    .showOpenDialog(mainWindow, {
       title: "打开文件夹",
       properties: ["openDirectory"]
     })

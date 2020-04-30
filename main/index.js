@@ -108,7 +108,7 @@ function openFile(win, type) {
   }
   win.webContents.send(CHANNEL.OPEN_MASK);
   dialog
-    .showOpenDialog(null, {
+    .showOpenDialog(win, {
       title,
       filters,
       properties: [property]
