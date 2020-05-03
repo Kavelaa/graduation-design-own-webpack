@@ -150,6 +150,37 @@ export function openOpenDialog() {
 
 /**
  *
+ * @param {() => string|void} callback
+ */
+export function listenToWindowClose(callback) {
+  const solve = (e) => {
+    const message = callback();
+
+    if (message) {
+      const mainWindow = getCurrentWindow();
+      dialog
+        .showMessageBox(mainWindow, {
+          message,
+          title: "提示",
+          buttons: ["确定", "取消"],
+          defaultId: 1,
+          noLink: true,
+          cancelId: 1
+        })
+        .then(({ response }) => {
+          response === 0 && mainWindow.destroy();
+          globalMask.close();
+        });
+      globalMask.open();
+      e.returnValue = false;
+    }
+  };
+  window.addEventListener("beforeunload", solve);
+  return () => window.removeEventListener("beforeunload", solve);
+}
+
+/**
+ *
  * @param {string} fileName 文件名
  * @description 判断是否是一个合法的文件名
  */

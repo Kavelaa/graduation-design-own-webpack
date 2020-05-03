@@ -74,10 +74,26 @@ function changeMenu(win) {
       ]
     },
     {
-      label: "窗口",
-      submenu: [{ label: "重新加载", role: "reload" }]
+      label: "关于",
+      submenu: [
+        {
+          label: "作者信息",
+          click: () =>
+            dialog.showMessageBox(win, {
+              buttons: [],
+              title: "作者信息",
+              message: "信处163 陈潇宇"
+            })
+        }
+      ]
     }
   ];
+  if (process.env.NODE_ENV !== "production") {
+    template.push({
+      label: "窗口",
+      submenu: [{ label: "重新加载", role: "reload" }]
+    });
+  }
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }

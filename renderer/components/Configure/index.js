@@ -12,6 +12,7 @@ import { Context } from "../../App";
 import { FileObj } from "../../helpers/fileObj";
 
 import "./index.css";
+import { listenToWindowClose } from "../../helpers";
 
 const nPath = require("path");
 
@@ -81,6 +82,18 @@ export default function ConfigureControl() {
     },
     [currentFileObj, setCurrentFileObj, fileObjList]
   );
+
+  useEffect(() => {
+    const callback = () => {
+      for (let i = 0; i < fileObjList.length; i++) {
+        const needSave = fileObjList[i].ref.current.needSave();
+        if (needSave) {
+          return "你有配置未保存，确定要退出吗？";
+        }
+      }
+    };
+    return listenToWindowClose(callback);
+  }, [fileObjList]);
 
   useEffect(() => {
     const { filePath, configPath } = currentFileObj;
