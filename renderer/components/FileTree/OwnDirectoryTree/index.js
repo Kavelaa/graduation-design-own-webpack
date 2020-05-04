@@ -20,23 +20,25 @@ const { Text } = Typography;
 const { DirectoryTree } = Tree;
 
 export default function OwnDirectoryTree() {
-  const { fileDirPath, setFileDirPath, currentFileObj, setCurrentFileObj } = useContext(
-    Context
-  );
+  const {
+    fileDirPath,
+    setFileDirPath,
+    currentFileObj,
+    setCurrentFileObj
+  } = useContext(Context);
   const { filesPaths, isReading, noDirPath } = useGetDirectory(fileDirPath);
 
   const [expandedKeys, setExpandedKeys] = useState([]);
 
   const mCurrentFileObj = useRef(currentFileObj);
 
-  const treeData = useMemo(() => filesPaths && formatToTreeData(filesPaths, false, "xml"), [
-    filesPaths
-  ]);
+  const treeData = useMemo(
+    () => filesPaths && formatToTreeData(filesPaths, false, "xml"),
+    [filesPaths]
+  );
   const handleSelect = useCallback(
-    (selectedKeys, { node }) => {
-      const { pos } = node;
+    (selectedKeys) => {
       const fileObj = new FileObj({
-        fileTreePos: pos,
         filePath: selectedKeys[0]
       });
 
@@ -52,42 +54,47 @@ export default function OwnDirectoryTree() {
   }, [fileDirPath]);
 
   // currentFileObj变化时走的副作用，这样做的效率比用依赖项数组要高，因为用到了expandedKeys，会导致更多的无意义计算
+  // 此处不会出现无限循环，忽略eslint的提示
+  // eslint-disable-next-line
   useEffect(() => {
     if (currentFileObj !== mCurrentFileObj.current) {
       mCurrentFileObj.current = currentFileObj;
 
-      const { fileTreePos } = currentFileObj;
-      if (fileTreePos) {
-        const posArr = fileTreePos.split("-");
-        let targetNode = treeData;
-        posArr.forEach((pos, idx) => {
-          if (idx > 0 && idx < posArr.length - 1) {
-            targetNode = targetNode[pos];
-            const { key } = targetNode;
-            const targetKey = expandedKeys.find(
-              (targetKey) => targetKey === key
-            );
-            if (targetKey === undefined)
-              setExpandedKeys([...expandedKeys, key]);
-          }
+      const { filePath } = currentFileObj;
+      if (filePath) {
+        let dirPath = filePath;
+        const incrementExpandedKeys = [];
+        while (dirPath.includes(fileDirPath) && dirPath !== fileDirPath) {
+          dirPath = nPath.dirname(dirPath);
+          incrementExpandedKeys.push(dirPath);
+        }
+        setExpandedKeys((prevKeys) => {
+          const set = new Set([...prevKeys, ...incrementExpandedKeys]);
+          return Array.from(set);
         });
       }
     }
   });
 
+  useEffect(() => {
+    setExpandedKeys([]);
+  }, [fileDirPath]);
+
   const folderName = nPath.basename(fileDirPath);
   const handleOpenFileFolder = () => {
-    openOpenDialog().then(dirPath => {
+    openOpenDialog().then((dirPath) => {
       if (dirPath) setFileDirPath(dirPath);
-    })
-  }
+    });
+  };
 
   return (
     <div style={{ padding: "5px 0" }}>
       {/* 没有打开任何文件夹，则提示`打开一个文件夹` */}
       {noDirPath ? (
         <Empty description="你可以打开一个文件夹">
-          <Button type="primary" onClick={handleOpenFileFolder}>打开文件夹</Button>
+          <Button type="primary" onClick={handleOpenFileFolder}>
+            打开文件夹
+          </Button>
         </Empty>
       ) : (
         <>

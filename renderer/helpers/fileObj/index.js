@@ -2,9 +2,8 @@
 let counter = 0;
 export function FileObj(inputObj) {
   if (inputObj) {
-    const { filePath, fileTreePos, configPath } = inputObj;
+    const { filePath, configPath } = inputObj;
     this.filePath = filePath;
-    this.fileTreePos = fileTreePos;
     this.configPath = configPath;
   }
   this.key = String(counter);
