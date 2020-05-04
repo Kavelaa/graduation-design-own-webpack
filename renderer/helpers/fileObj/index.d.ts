@@ -4,6 +4,7 @@ interface IFileObj {
   filePath?: string;
   fileTreePos?: string;
   configPath?: string;
+  key: string;
   ref: MutableRefObject;
 }
 interface IInputObj {
