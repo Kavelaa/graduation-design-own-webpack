@@ -27,11 +27,9 @@ const { Title } = Typography;
 const { Item } = Form;
 
 export default function ConfigChooseModal({ visible, closeModal }) {
-  const {
-    configDirPath,
-    setConfigDirPath,
-    setCurrentFileObj
-  } = useContext(Context);
+  const { configDirPath, setConfigDirPath, setCurrentFileObj } = useContext(
+    Context
+  );
   const { filesPaths: configFilesPaths } = useGetDirectory(configDirPath);
   const [firstStepNow, setFirstStepNow] = useState(true);
   const treeData = useMemo(() => {
@@ -51,7 +49,7 @@ export default function ConfigChooseModal({ visible, closeModal }) {
     const {
       target: { value }
     } = e;
-    setInputValue(value);
+    setInputValue(value.trim());
   }, []);
 
   // Modal相关
@@ -148,6 +146,11 @@ export default function ConfigChooseModal({ visible, closeModal }) {
     >
       {firstStepNow ? (
         <>
+          <Alert
+            type="info"
+            message="你可以基于已有的配置文件，来快速地生成一个新的配置"
+          />
+          <br></br>
           <Alert
             type="warning"
             message={

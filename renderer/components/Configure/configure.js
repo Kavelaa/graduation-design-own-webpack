@@ -14,6 +14,7 @@ import {
   Col,
   Form,
   Menu,
+  Input,
   InputNumber,
   Select,
   Divider,
@@ -25,9 +26,15 @@ import {
   message,
   Dropdown,
   Drawer,
-  Modal
+  Modal,
+  Checkbox
 } from "antd";
-import { FolderOpenOutlined, DownOutlined } from "@ant-design/icons";
+import {
+  FolderOpenOutlined,
+  DownOutlined,
+  PlusOutlined,
+  MinusCircleOutlined
+} from "@ant-design/icons";
 
 import { useDealXML } from "./hooks";
 import { openFileManager, openSaveDialog } from "../../helpers";
@@ -44,6 +51,9 @@ export default forwardRef(function Configure(
   const [form] = useForm();
   const [choosedPayload, setChoosedPayload] = useState();
   const [config, setConfig] = useState();
+  const [editType, setEditType] = useState();
+  const [editForm] = useForm();
+  const [haveEditPayload, setHaveEditPayload] = useState(false);
   const [drawerPayloadName, setDrawerPayloadName] = useState();
   const [drawerVisible, setDrawerVisible] = useState(false);
 
@@ -58,6 +68,7 @@ export default forwardRef(function Configure(
     deleted,
     saveXML,
     generateBin,
+    changeXMLObj,
     error
   } = useDealXML(configPath || filePath);
 
@@ -67,6 +78,666 @@ export default forwardRef(function Configure(
   // 以下ref配合useEffect
   const canSaveRef = useRef(() => false);
   const getFieldsValueRef = useRef(() => false);
+
+  const editModal = useMemo(() => {
+    const shouldShow = !!editType;
+    const handleFinish = (values) => {
+      const { name } = choosedPayload;
+      const configName = config && config.name;
+      const {
+        PayLoadName,
+        PayLoadCode,
+        InsName,
+        InsCode,
+        widgetType,
+        ByteName,
+        ByteStart,
+        ByteEnd,
+        action,
+        removedPayLoads,
+        removedInses,
+        removedBytes
+      } = values;
+
+      if (action === "add") {
+        // 如果增加的是负载
+        if (PayLoadName) {
+          const action = { type: "add" };
+          action.data = {
+            PayLoadName,
+            PayLoadCode
+          };
+          changeXMLObj(null, null, action);
+        }
+        // 如果增加的是指令
+        else if (InsName) {
+          const action = { type: "add" };
+          action.data = {
+            InsName,
+            InsCode
+          };
+          changeXMLObj(name, null, action);
+        }
+        // 如果增加的是指令下的配置
+        else if (widgetType && ByteName) {
+          const { Option, Range } = values;
+          const action = {
+            type: "add",
+            data: { ByteName, widgetType, ByteStart, ByteEnd }
+          };
+          if (widgetType === "Option") {
+            action.data.children = { Option };
+          } else if (widgetType === "Range") {
+            Range.Precision = String(10 ** -Range.Precision);
+            Range.Unit = Range.Unit === undefined ? "" : Range.Unit;
+            action.data.children = { ...Range };
+          }
+          changeXMLObj(name, configName, action);
+        }
+      } else if (action === "remove") {
+        const action = { type: "remove" };
+        if (removedPayLoads) {
+          action.data = { removedPayLoads };
+          changeXMLObj(null, null, action);
+        } else if (removedInses) {
+          action.data = { removedInses };
+          changeXMLObj(name, null, action);
+        } else if (removedBytes) {
+          action.data = { removedBytes };
+          changeXMLObj(name, configName, action);
+        }
+      }
+      setEditType();
+      setHaveEditPayload(true);
+      forceUpdateParent();
+      editForm.resetFields();
+    };
+    const handleCancel = () => {
+      editForm.resetFields();
+      setEditType();
+    };
+
+    let title;
+    let head = null;
+    let content;
+    if (editType === "PayLoad") {
+      title = "编辑负载";
+      head = (
+        <Item
+          label="选择操作"
+          name="action"
+          rules={[{ required: true, message: "请选择一个操作" }]}
+        >
+          <Select>
+            {payloads ? (
+              <>
+                <Option value="add">新增</Option>
+                <Option value="remove">删除</Option>
+              </>
+            ) : (
+              <Option value="add">新增</Option>
+            )}
+          </Select>
+        </Item>
+      );
+      content = (
+        <Item shouldUpdate>
+          {({ getFieldValue }) => {
+            const action = getFieldValue("action");
+
+            if (action === "add")
+              return (
+                <>
+                  <Item
+                    label="负载名称"
+                    name="PayLoadName"
+                    rules={[
+                      { required: true, message: "此处必填", whitespace: true },
+                      {
+                        validator(rule, value) {
+                          if (
+                            (payloads &&
+                              payloads.find(({ name }) => name === value)) ||
+                            (name && name === value)
+                          )
+                            return Promise.reject("名称发生重复");
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
+                  >
+                    <Input />
+                  </Item>
+                  <Item
+                    name="PayLoadCode"
+                    label="负载编号"
+                    extra="请输入在0-255之间的整数"
+                    rules={[
+                      { required: true, message: "此处必填" },
+                      {
+                        validator(rule, value) {
+                          const tip = "已有该编号的负载";
+                          if (payloads) {
+                            return payloads.find(
+                              ({ code }) => parseInt(code, 16) === value
+                            )
+                              ? Promise.reject(tip)
+                              : Promise.resolve();
+                          } else {
+                            return parseInt(code, 16) === value
+                              ? Promise.reject(tip)
+                              : Promise.resolve();
+                          }
+                        }
+                      }
+                    ]}
+                  >
+                    <InputNumber min={0} max={255} />
+                  </Item>
+                </>
+              );
+            else if (action === "remove") {
+              return (
+                <Item
+                  name="removedPayLoads"
+                  label="选择你要删除的负载"
+                  rules={[
+                    { required: true, message: "至少选择一个" },
+                    {
+                      validator(rule, value) {
+                        if (value && value.length === payloads.length)
+                          return Promise.reject("不可全部删除");
+                        return Promise.resolve();
+                      }
+                    }
+                  ]}
+                >
+                  <Checkbox.Group
+                    options={payloads && payloads.map(({ name }) => name)}
+                  />
+                </Item>
+              );
+            }
+          }}
+        </Item>
+      );
+    } else if (editType === "Ins") {
+      title = "编辑指令";
+      head = (
+        <>
+          <Item label="负载名称">{choosedPayload.name}</Item>
+          <Item
+            label="选择操作"
+            name="action"
+            rules={[{ required: true, message: "请选择一个操作" }]}
+          >
+            <Select>
+              {choosedPayload.configs.length > 0 ? (
+                <>
+                  <Option value="add">新增</Option>
+                  <Option value="remove">删除</Option>
+                </>
+              ) : (
+                <Option value="add">新增</Option>
+              )}
+            </Select>
+          </Item>
+        </>
+      );
+      content = (
+        <Item shouldUpdate>
+          {({ getFieldValue }) => {
+            const action = getFieldValue("action");
+
+            if (action === "add")
+              return (
+                <>
+                  <Item
+                    label="指令名称"
+                    name="InsName"
+                    rules={[
+                      { required: true, message: "此处必填", whitespace: true },
+                      {
+                        validator(rule, value) {
+                          if (
+                            configs &&
+                            configs.find(({ name }) => name === value)
+                          )
+                            return Promise.reject("名称发生重复");
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
+                  >
+                    <Input />
+                  </Item>
+                  <Item
+                    name="InsCode"
+                    label="指令编号"
+                    extra="请输入在0-255之间的整数"
+                    rules={[
+                      { required: true, message: "此处必填" },
+                      {
+                        validator(rule, value) {
+                          const tip = "已有该编号的指令";
+                          const { configs = [] } = choosedPayload;
+
+                          return configs.find(
+                            ({ code }) => parseInt(code, 16) === value
+                          )
+                            ? Promise.reject(tip)
+                            : Promise.resolve();
+                        }
+                      }
+                    ]}
+                  >
+                    <InputNumber min={0} max={255} />
+                  </Item>
+                </>
+              );
+            else if (action === "remove") {
+              return (
+                <Item
+                  name="removedInses"
+                  label="选择你要删除的指令"
+                  rules={[{ required: true, message: "至少选择一个" }]}
+                >
+                  <Checkbox.Group
+                    options={choosedPayload.configs.map(({ name }) => name)}
+                  />
+                </Item>
+              );
+            }
+          }}
+        </Item>
+      );
+    } else if (editType === "Byte") {
+      title = "编辑当前指令下的行为";
+      head = (
+        <>
+          <Item label="指令名称">{config.name}</Item>
+          <Item
+            label="选择操作"
+            name="action"
+            rules={[{ required: true, message: "请选择一个操作" }]}
+          >
+            <Select>
+              {config.componentTypes.length > 0 ? (
+                <>
+                  <Option value="add">新增</Option>
+                  <Option value="remove">删除</Option>
+                </>
+              ) : (
+                <Option value="add">新增</Option>
+              )}
+            </Select>
+          </Item>
+        </>
+      );
+      content = (
+        <Item shouldUpdate>
+          {({ getFieldValue, setFieldsValue }) => {
+            const action = getFieldValue("action");
+
+            if (action === "add") {
+              const byteSpaceConfigure = () => {
+                const type = getFieldValue("widgetType");
+                let showByteControl = false;
+                let component;
+
+                switch (type) {
+                  case "Option":
+                    showByteControl = true;
+                    component = (
+                      <>
+                        <Form.List name="Option">
+                          {(fields, { add, remove }) => {
+                            return (
+                              <>
+                                {fields &&
+                                  fields.map((field) => (
+                                    <Item key={field.key}>
+                                      <Item
+                                        {...field}
+                                        rules={[
+                                          {
+                                            required: true,
+                                            message: "此处必填",
+                                            whitespace: true
+                                          }
+                                        ]}
+                                        noStyle
+                                      >
+                                        <Input
+                                          style={{ width: "60%" }}
+                                          placeholder="输入Option控件可选项的名称"
+                                        />
+                                      </Item>
+                                      {fields.length > 1 && (
+                                        <MinusCircleOutlined
+                                          style={{ margin: "0 8px" }}
+                                          onClick={() => {
+                                            remove(field.name);
+                                          }}
+                                        />
+                                      )}
+                                    </Item>
+                                  ))}
+                                <Item noStyle>
+                                  <Button
+                                    type="dashed"
+                                    onClick={() => {
+                                      add();
+                                    }}
+                                    style={{ width: "60%" }}
+                                  >
+                                    <PlusOutlined /> 增加
+                                  </Button>
+                                </Item>
+                              </>
+                            );
+                          }}
+                        </Form.List>
+                      </>
+                    );
+                    break;
+                  case "Range": {
+                    const DataType = getFieldValue(["Range", "DataType"]);
+                    if (DataType) showByteControl = true;
+
+                    component = (
+                      <>
+                        <Item
+                          label="数据类型"
+                          name={["Range", "DataType"]}
+                          rules={[{ required: true, message: "此处必填" }]}
+                        >
+                          <Select>
+                            <Option value="INT16">INT16</Option>
+                            <Option value="INT32">INT32</Option>
+                          </Select>
+                        </Item>
+                        <Item label="精度" required>
+                          10^(-
+                          <Item
+                            name={["Range", "Precision"]}
+                            rules={[{ required: true, message: "此处必填" }]}
+                            normalize={(val) => String(val)}
+                            noStyle
+                          >
+                            <InputNumber min={0} max={12} />
+                          </Item>
+                          )
+                        </Item>
+                        <Item
+                          label="最小值"
+                          name={["Range", "limit_lower"]}
+                          dependencies={[["Range", "limit_upper"]]}
+                          rules={[
+                            {
+                              required: true,
+                              message: "此处必填"
+                            },
+                            {
+                              validator(rule, value) {
+                                const max = getFieldValue([
+                                  "Range",
+                                  "limit_upper"
+                                ]);
+                                if (max === undefined || value <= max)
+                                  return Promise.resolve();
+
+                                return Promise.reject(
+                                  "最小值应该小于或等于最大值！"
+                                );
+                              }
+                            }
+                          ]}
+                          normalize={(val) => String(val)}
+                        >
+                          <InputNumber />
+                        </Item>
+                        <Item
+                          label="最大值"
+                          name={["Range", "limit_upper"]}
+                          dependencies={[["Range", "limit_lower"]]}
+                          rules={[
+                            {
+                              required: true,
+                              message: "此处必填"
+                            },
+                            {
+                              validator(rule, value) {
+                                const min = getFieldValue([
+                                  "Range",
+                                  "limit_lower"
+                                ]);
+                                if (min === undefined || value >= min)
+                                  return Promise.resolve();
+
+                                return Promise.reject(
+                                  "最大值应该大于或等于最小值！"
+                                );
+                              }
+                            }
+                          ]}
+                          normalize={(val) => String(val)}
+                        >
+                          <InputNumber />
+                        </Item>
+                        <Item
+                          label="单位"
+                          name={["Range", "Unit"]}
+                          rules={[{ whitespace: true }]}
+                        >
+                          <Input />
+                        </Item>
+                      </>
+                    );
+                  }
+                }
+                return (
+                  <>
+                    {component}
+                    {showByteControl && (
+                      <>
+                        <Divider />
+                        <Item
+                          name="ByteStart"
+                          label="数据写入起点"
+                          extra="请输入0-15的整数"
+                          rules={[
+                            { required: true, message: "此处必填" },
+                            {
+                              validator(rule, value) {
+                                const { componentTypes } = config;
+                                let byteLength;
+
+                                if (type === "Option") byteLength = 1;
+                                else if (type === "Range") {
+                                  byteLength =
+                                    parseInt(
+                                      getFieldValue([
+                                        "Range",
+                                        "DataType"
+                                      ]).slice(3)
+                                    ) / 8;
+                                }
+
+                                let ByteEnd = value
+                                  ? value + byteLength - 1
+                                  : "";
+
+                                for (
+                                  let i = 0;
+                                  i < componentTypes.length;
+                                  i++
+                                ) {
+                                  const {
+                                    byteStart: cByteStart,
+                                    byteEnd: cByteEnd
+                                  } = componentTypes[i];
+                                  if (
+                                    !(
+                                      (value < cByteStart &&
+                                        ByteEnd < cByteStart) ||
+                                      (value > cByteStart && ByteEnd > cByteEnd)
+                                    )
+                                  )
+                                    return Promise.reject("空间已被占用");
+                                }
+                                return Promise.resolve();
+                              }
+                            }
+                          ]}
+                        >
+                          <InputNumber
+                            min={0}
+                            max={15}
+                            onChange={(v) => {
+                              let byteLength;
+                              if (type === "Option") byteLength = 1;
+                              else if (type === "Range") {
+                                byteLength =
+                                  parseInt(
+                                    getFieldValue(["Range", "DataType"]).slice(
+                                      3
+                                    )
+                                  ) / 8;
+                              }
+
+                              setFieldsValue({
+                                ByteEnd: v + byteLength - 1
+                              });
+                            }}
+                          />
+                        </Item>
+                        <Item
+                          name="ByteEnd"
+                          label="数据写入终点"
+                          rules={[
+                            { required: true, message: "此处必填" },
+                            {
+                              validator(rule, value) {
+                                if (value > 15)
+                                  return Promise.reject("数据超过了空间边界");
+                                return Promise.resolve();
+                              }
+                            }
+                          ]}
+                        >
+                          <InputNumber disabled />
+                        </Item>
+                      </>
+                    )}
+                  </>
+                );
+              };
+              return (
+                <>
+                  <Item
+                    label="配置名称"
+                    name="ByteName"
+                    rules={[
+                      {
+                        required: true,
+                        message: "此处必填",
+                        whitespace: true
+                      },
+                      {
+                        validator(rule, value) {
+                          const { componentTypes } = config;
+                          if (
+                            componentTypes &&
+                            componentTypes.find(({ name }) => name === value)
+                          )
+                            return Promise.reject("名称发生重复");
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
+                  >
+                    <Input />
+                  </Item>
+                  <Item
+                    label="控件类型"
+                    name="widgetType"
+                    rules={[{ required: true, message: "此处必填" }]}
+                  >
+                    <Select
+                      onChange={() =>
+                        editForm.resetFields([
+                          "Option",
+                          "Range",
+                          "ByteStart",
+                          "ByteEnd"
+                        ])
+                      }
+                    >
+                      <Option value="Option">Option</Option>
+                      <Option value="Range">Range</Option>
+                    </Select>
+                  </Item>
+                  <Divider />
+                  {byteSpaceConfigure()}
+                </>
+              );
+            } else if (action === "remove") {
+              const { componentTypes } = config;
+              const options = componentTypes.map(({ name }) => name);
+
+              return (
+                <Item
+                  name="removedBytes"
+                  label="选择你要删除的行为配置"
+                  rules={[{ required: true, message: "至少选择一项" }]}
+                >
+                  {options.length > 0 && <Checkbox.Group options={options} />}
+                </Item>
+              );
+            }
+          }}
+        </Item>
+      );
+    }
+
+    return (
+      <Modal
+        title={title}
+        visible={shouldShow}
+        maskClosable={false}
+        footer={null}
+        onCancel={handleCancel}
+      >
+        <Form
+          form={editForm}
+          initialValues={{ Option: [""] }}
+          size="middle"
+          layout="vertical"
+          onFinish={handleFinish}
+        >
+          {head}
+          {content}
+          <Item>
+            <Button type="primary" htmlType="submit">
+              确定
+            </Button>
+          </Item>
+        </Form>
+      </Modal>
+    );
+  }, [
+    editForm,
+    editType,
+    changeXMLObj,
+    choosedPayload,
+    config,
+    configs,
+    name,
+    code,
+    payloads,
+    forceUpdateParent
+  ]);
 
   const configure = useMemo(() => {
     function dealConfigs(configs) {
@@ -167,28 +838,27 @@ export default forwardRef(function Configure(
       );
     }
     function renderPayloadConfig(fieldsValue) {
-      return (
-        fieldsValue &&
-        Object.entries(fieldsValue).map(([insKey, insValue], idx) => {
-          const items = Object.entries(insValue).map(([label, value]) => {
+      return fieldsValue
+        ? Object.entries(fieldsValue).map(([insKey, insValue], idx) => {
+            const items = Object.entries(insValue).map(([label, value]) => {
+              return (
+                <DescItem key={label} label={label}>
+                  {value}
+                </DescItem>
+              );
+            });
             return (
-              <DescItem key={label} label={label}>
-                {value}
-              </DescItem>
+              <Descriptions bordered key={idx} layout="vertical" title={insKey}>
+                {items}
+              </Descriptions>
             );
-          });
-          return (
-            <Descriptions bordered key={idx} layout="vertical" title={insKey}>
-              {items}
-            </Descriptions>
-          );
-        })
-      );
+          })
+        : null;
     }
     const fieldsValue = getFieldsValueRef.current();
     if (!fieldsValue || Object.keys(fieldsValue).length === 0) return;
 
-    const haveRoot = !Array.isArray(configs);
+    const haveRoot = !!payloads;
     if (haveRoot) {
       const payloadNameArr = Object.keys(fieldsValue);
       return renderDrawer({
@@ -225,7 +895,7 @@ export default forwardRef(function Configure(
       width: 0.4 * window.innerWidth,
       children: renderPayloadConfig(fieldsValue)
     });
-  }, [name, configs, drawerPayloadName, drawerVisible]);
+  }, [name, drawerPayloadName, drawerVisible, payloads]);
 
   const handleDropdownSelect = useCallback(
     ({ key }) => {
@@ -257,6 +927,7 @@ export default forwardRef(function Configure(
           if (result) {
             saveXML(result, values).then(() => {
               setIsSaving(false);
+              setHaveEditPayload(false);
               changeFileObj({ filePath: result, configPath: undefined });
             });
           } else {
@@ -266,6 +937,7 @@ export default forwardRef(function Configure(
       } else {
         saveXML(filePath, values).then(() => {
           setIsSaving(false);
+          setHaveEditPayload(false);
           changeFileObj({});
         });
       }
@@ -297,8 +969,11 @@ export default forwardRef(function Configure(
 
   useImperativeHandle(
     ref,
-    () => ({ needSave: () => form.isFieldsTouched(), isDeleted: deleted }),
-    [deleted, form]
+    () => ({
+      needSave: () => form.isFieldsTouched() || haveEditPayload,
+      isDeleted: deleted
+    }),
+    [deleted, form, haveEditPayload]
   );
 
   // 用副作用主要为了保证第一次渲染Form时，form还没有匹配到Form实例，就使用了FormInstance方法导致弹warning的问题
@@ -317,21 +992,24 @@ export default forwardRef(function Configure(
       form.resetFields();
       mInitialValues.current = initialValues;
 
+      forceUpdateParent();
+      let newPayload;
+      configs
+        ? (newPayload = { name, code, configs })
+        : choosedPayload
+        ? (newPayload = payloads.find(
+            ({ name }) => name === choosedPayload.name
+          ))
+        : (newPayload = payloads[0]);
+
+      setChoosedPayload(newPayload);
+
       if (config && config.name) {
-        const tConfig = choosedPayload.configs.find(
+        const tConfig = newPayload.configs.find(
           (tConfig) => tConfig.name === config.name
         );
         setConfig(tConfig);
       }
-
-      forceUpdateParent();
-      configs
-        ? setChoosedPayload({ name, code, configs })
-        : choosedPayload
-        ? setChoosedPayload(
-            payloads.find(({ name }) => name === choosedPayload.name)
-          )
-        : setChoosedPayload(payloads[0]);
     }
   });
 
@@ -399,6 +1077,16 @@ export default forwardRef(function Configure(
             />
           </Tooltip>
         )}
+        <Button
+          style={{
+            marginLeft: "5px",
+            overflowX: "hidden",
+            textOverflow: "ellipsis"
+          }}
+          onClick={() => setEditType("PayLoad")}
+        >
+          编辑负载
+        </Button>
       </Title>
       <Row gutter={16} justify="end">
         <Col span={4}>
@@ -426,7 +1114,7 @@ export default forwardRef(function Configure(
         {!deleted && (
           <Item shouldUpdate noStyle>
             {() => {
-              const disabled = !canSaveRef.current();
+              const disabled = !haveEditPayload && !canSaveRef.current();
               return (
                 <>
                   <Col span={4}>
@@ -444,11 +1132,12 @@ export default forwardRef(function Configure(
                       保存
                     </Button>
                   </Col>
-                  {!disabled && (
+                  {canSaveRef.current() && (
                     <Col span={4}>
                       <Button
+                        block
                         style={{
-                          overflow: "hidden",
+                          overflowX: "hidden",
                           textOverflow: "ellipsis"
                         }}
                         onClick={() => {
@@ -456,7 +1145,7 @@ export default forwardRef(function Configure(
                           forceUpdateParent();
                         }}
                       >
-                        取消当前未保存的更改
+                        撤消所有值的更改
                       </Button>
                     </Col>
                   )}
@@ -466,8 +1155,8 @@ export default forwardRef(function Configure(
           </Item>
         )}
       </Row>
-      <Item label={"选择配置项"} wrapperCol={24}>
-        <Row>
+      <Item label={"指令名称"} wrapperCol={24}>
+        <Row gutter={16}>
           <Col span={6}>
             <Select
               style={{ width: "100%" }}
@@ -485,10 +1174,31 @@ export default forwardRef(function Configure(
                 })}
             </Select>
           </Col>
+          <Col span={3}>
+            <Button
+              block
+              style={{ overflowX: "hidden", textOverflow: "ellipsis" }}
+              onClick={() => setEditType("Ins")}
+            >
+              编辑指令
+            </Button>
+          </Col>
+          {config && (
+            <Col span={4}>
+              <Button
+                block
+                style={{ overflowX: "hidden", textOverflow: "ellipsis" }}
+                onClick={() => setEditType("Byte")}
+              >
+                编辑当前指令下的行为
+              </Button>
+            </Col>
+          )}
         </Row>
       </Item>
       <Divider style={{ backgroundColor: "#0000002f", flexShrink: "0" }} />
       {configure}
+      {editModal}
       {(configs || payloads) && showFormInfo}
     </Form>
   ) : (

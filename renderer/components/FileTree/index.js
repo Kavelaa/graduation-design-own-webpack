@@ -19,7 +19,7 @@ export default function FileTree() {
         style={{ overflowX: "hidden", textOverflow: "ellipsis" }}
         onClick={openModal}
       >
-        新建一个负载配置
+        基于模板创建
       </Button>
       <br />
       <ConfigChooseModal visible={modalShown} closeModal={closeModal} />

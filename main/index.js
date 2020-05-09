@@ -82,7 +82,7 @@ function changeMenu(win) {
             dialog.showMessageBox(win, {
               buttons: [],
               title: "作者信息",
-              message: "信处163 陈潇宇"
+              message: "成都信息工程大学 信处163 陈潇宇"
             })
         }
       ]

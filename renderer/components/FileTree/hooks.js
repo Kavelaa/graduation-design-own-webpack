@@ -92,7 +92,8 @@ export function formatToTreeData(filesPaths, forTreeSelect, ext) {
     let result = {
       key,
       title: name,
-      isLeaf: children === undefined
+      isLeaf: children === undefined,
+      selectable: children === undefined
     };
     if (forTreeSelect) {
       result.value = key;

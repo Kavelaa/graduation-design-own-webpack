@@ -5,7 +5,7 @@ const {
   remote: { dialog, getCurrentWindow }
 } = require("electron");
 const { parseStringPromise: parseStringP, Builder } = require("xml2js");
-export const md5 = require("md5");
+const md5 = require("md5");
 
 const { promises: fsP } = fs;
 
@@ -69,11 +69,19 @@ export function saveObj2XML(filePath, XMLObj, data, flag = "w") {
  *
  * @param {string} filePath 绝对路径
  * @param {ArrayBuffer[]} buffers
+ * @description 将Buffer生成对应的二进制文件，然后对二进制进行MD5加密，将MD5码置于文件头部
  */
 export function generateBinFromBuffers(filePath, buffers) {
   const typedArrays = buffers.map((buffer) => new Uint8Array(buffer));
   const allArrays = concatenate(Uint8Array, ...typedArrays);
-  return fsP.writeFile(`${filePath}.bin`, allArrays, {
+  const md5Str = md5(Buffer.from(allArrays));
+  const md5Arr = new Uint8Array(16);
+  for (let i = 0; i < md5Str.length; i = i + 2) {
+    let value = parseInt(md5Str.substr(i, 2), 16);
+    md5Arr[i / 2] = value;
+  }
+  const resultArr = concatenate(Uint8Array, md5Arr, allArrays);
+  return fsP.writeFile(`${filePath}.bin`, resultArr, {
     encoding: "binary"
   });
 }
@@ -200,6 +208,16 @@ export function isFileName(fileName) {
   }
 
   return true;
+}
+
+/**
+ * 
+ * @param {number} num 0-255
+ * @description 数字范围必须0-255 
+ */
+export function uInt8ToHexStr(num) {
+  const hex = parseInt(num, 16).toString(16);
+  return hex.length === 1 ? `0x0${hex}` : `0x${hex}`;
 }
 
 export const globalMask = {

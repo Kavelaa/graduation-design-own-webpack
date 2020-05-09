@@ -1,21 +1,30 @@
-<DBItem PayLoadName="合成孔径雷达" PayLoadCode="0x11">
-  <Ins InsName="无动作指令" InsCode="0x10"/>
-  <Ins InsName="对海" InsCode="0x20">
-    <Byte ByteName="跳频方式" Type="Option" ByteStart="0" ByteEnd="0" Value="固定">
-      <Option Sel="0x00" Val="固定"/>
-      <Option Sel="0x01" Val="帧间跳"/>
-    </Byte>
-    <Byte ByteName="方位扫描中心" Type="Range" ByteStart="1" ByteEnd="2" Value="-154">
-      <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
-    </Byte>
-  </Ins>
-  <Ins InsName="雷达辐射" InsCode="0x30">
-    <Byte ByteName="扫描方式" Type="Option" ByteStart="0" ByteEnd="0" Value="广度扫描">
-      <Option Sel="0x00" Val="广度扫描"/>
-      <Option Sel="0x01" Val="深度扫描"/>
-    </Byte>
-    <Byte ByteName="辐射范围" Type="Range" ByteStart="1" ByteEnd="2" Value="2">
-      <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
-    </Byte>
-  </Ins>
-</DBItem>
+<root>
+  <DBItem PayLoadName="合成孔径雷达" PayLoadCode="0x11">
+    <Ins InsName="无动作指令" InsCode="0x10"/>
+    <Ins InsName="对海" InsCode="0x20">
+      <Byte ByteName="跳频方式" Type="Option" ByteStart="0" ByteEnd="0" Value="固定">
+        <Option Sel="0x00" Val="固定"/>
+        <Option Sel="0x01" Val="帧间跳"/>
+      </Byte>
+      <Byte ByteName="方位扫描中心" Type="Range" ByteStart="1" ByteEnd="2" Value="-154">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+    <Ins InsName="雷达辐射" InsCode="0x30">
+      <Byte ByteName="扫描方式" Type="Option" ByteStart="0" ByteEnd="0" Value="广度扫描">
+        <Option Sel="0x00" Val="广度扫描"/>
+        <Option Sel="0x01" Val="深度扫描"/>
+      </Byte>
+      <Byte ByteName="辐射范围" Type="Range" ByteStart="1" ByteEnd="2" Value="2">
+        <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
+      </Byte>
+    </Ins>
+  </DBItem>
+  <DBItem PayLoadName="test" PayLoadCode="0x01">
+    <Ins InsName="test" InsCode="0x01">
+      <Byte ByteName="ts" Type="Option" ByteStart="0" ByteEnd="0">
+        <Option Sel="0x00" Val="test"/>
+      </Byte>
+    </Ins>
+  </DBItem>
+</root>

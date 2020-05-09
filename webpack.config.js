@@ -68,6 +68,7 @@ module.exports = function (env, argv) {
   };
 
   if (mode === "development") {
+    config.devtool = false;
   } else if (mode === "production") {
     config.plugins.push(
       new MiniCssExtractPlugin({
@@ -80,6 +81,7 @@ module.exports = function (env, argv) {
     config.plugins.push(
       new CopyPlugin([
         "./package.json",
+        "temp.xml",
         { from: "./defaultConfig.json", to: "config.json" }
       ])
     );

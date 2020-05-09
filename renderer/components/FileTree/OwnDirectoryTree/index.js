@@ -47,7 +47,7 @@ export default function OwnDirectoryTree() {
     [setCurrentFileObj]
   );
   const handleExpand = useCallback((keys) => {
-    setExpandedKeys([...keys]);
+    setExpandedKeys(keys);
   }, []);
   const handleOpenFolder = useCallback(() => {
     openFileManager(nPath.resolve(fileDirPath));
@@ -57,7 +57,7 @@ export default function OwnDirectoryTree() {
   // 此处不会出现无限循环，忽略eslint的提示
   // eslint-disable-next-line
   useEffect(() => {
-    if (currentFileObj !== mCurrentFileObj.current) {
+    if (currentFileObj !== mCurrentFileObj.current && !noDirPath) {
       mCurrentFileObj.current = currentFileObj;
 
       const { filePath } = currentFileObj;
@@ -115,6 +115,7 @@ export default function OwnDirectoryTree() {
             ) : (
               <DirectoryTree
                 style={{ padding: "5px 0" }}
+                autoExpandParent={false}
                 selectedKeys={[currentFileObj.filePath]}
                 treeData={treeData}
                 expandedKeys={expandedKeys}

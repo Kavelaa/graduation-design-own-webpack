@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@ant-design/icons": "^4.0.5",
-    "antd": "^4.1.0",
+    "antd": "^4.2.0",
     "md5": "^2.2.1",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",

@@ -41,7 +41,13 @@ export default function ConfigureControl() {
           );
           setFileObjList(newFileObjList);
 
-          if (key === currentFileObj.key) {
+          const tFileObj = fileObjList.find(({ key: tKey }) => key === tKey);
+          const { filePath: tFilePath, configPath: tConfigPath } = tFileObj;
+
+          if (
+            (tFilePath && tFilePath === currentFileObj.filePath) ||
+            (tConfigPath && tConfigPath === currentFileObj.configPath)
+          ) {
             let newFileObj;
 
             if (fileObjList.length === 1) {
@@ -106,13 +112,16 @@ export default function ConfigureControl() {
       });
       if (targetObj === undefined) {
         setFileObjList([...fileObjList, currentFileObj]);
-      } else {
-        setCurrentFileObj(targetObj);
       }
     }
   }, [currentFileObj, fileObjList, setCurrentFileObj]);
 
-  const activeKey = currentFileObj.key;
+  const existFileObj = fileObjList.find(
+    ({ filePath, configPath }) =>
+      (filePath && filePath === currentFileObj.filePath) ||
+      (configPath && configPath === currentFileObj.configPath)
+  );
+  const activeKey = existFileObj ? existFileObj.key : currentFileObj.key;
 
   return fileObjList.length > 0 ? (
     <Tabs

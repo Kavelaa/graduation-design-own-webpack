@@ -3,7 +3,7 @@ import {
   readAndParseXML,
   saveObj2XML,
   generateBinFromBuffers,
-  md5
+  uInt8ToHexStr
 } from "../../helpers";
 
 const { watch: fsWatch } = require("fs");
@@ -14,14 +14,14 @@ const components = {
 };
 
 export function useDealXML(filePath) {
-  const [XMLObj, setXMLObj] = useState();
+  let [XMLObj, setXMLObj] = useState();
   const [deleted, setDeleted] = useState(false);
   const result = useMemo(() => {
-    function parseDBItem(XMLObj, haveRoot) {
+    function parseDBItem(DBItem, haveRoot) {
       let {
         $: { PayLoadName: name, PayLoadCode: code },
-        Ins: configs
-      } = XMLObj;
+        Ins: configs = []
+      } = DBItem;
       let initialValues = {};
 
       configs = configs.map((config) => {
@@ -32,14 +32,16 @@ export function useDealXML(filePath) {
         let result = {
           name: InsName,
           pathName: [name, InsName],
-          code: InsCode
+          code: InsCode,
+          componentTypes: []
         };
         initialValues[InsName] = {};
 
         if (Byte) {
           let componentTypes = Byte;
-          let code;
+
           componentTypes = componentTypes.map((componentType) => {
+            let code;
             let {
               $: { ByteName, Type, Value, ByteStart, ByteEnd },
               [Type]: children
@@ -104,7 +106,7 @@ export function useDealXML(filePath) {
     }
     try {
       if (XMLObj) {
-        const { DBItem, Ins } = XMLObj;
+        const { DBItem, Ins = [] } = XMLObj;
 
         if (DBItem) {
           const results = DBItem.map((item) => parseDBItem(item, true));
@@ -140,6 +142,146 @@ export function useDealXML(filePath) {
     (path, data, flag) => saveObj2XML(path, XMLObj, data, flag),
     [XMLObj]
   );
+  const changeXMLObj = useCallback(
+    (payloadName, insName, action) => {
+      function dealByte(payload) {
+        const { Ins } = payload;
+        const instruction = Ins.find((tIns) => tIns.$.InsName === insName);
+        const { type, data } = action;
+        const {
+          ByteName,
+          widgetType,
+          ByteStart,
+          ByteEnd,
+          children,
+          removedBytes
+        } = data;
+
+        if (type === "add") {
+          const { Option } = children;
+          const doWithByte = () => {
+            const newByte = {
+              $: {
+                ByteName,
+                Type: widgetType,
+                ByteStart,
+                ByteEnd
+              }
+            };
+
+            if (widgetType === "Option") {
+              newByte.Option = Option.map((Val, idx) => {
+                const hex = idx.toString(16);
+                const Sel = hex.length === 1 ? `0x0${hex}` : `0x${hex}`;
+                return { $: { Sel, Val } };
+              });
+            } else if (widgetType === "Range") {
+              newByte.Range = [{ $: children }];
+            }
+
+            instruction.Byte.push(newByte);
+          };
+
+          if (instruction.Byte) {
+            doWithByte();
+          } else {
+            instruction.Byte = [];
+            doWithByte();
+          }
+        } else if (type === "remove") {
+          instruction.Byte = instruction.Byte.filter(
+            ({ $: { ByteName } }) =>
+              removedBytes.find((name) => name === ByteName) === undefined
+          );
+        }
+      }
+
+      function dealIns(payload) {
+        const { Ins } = payload;
+        let {
+          type,
+          data: { InsName, InsCode, removedInses }
+        } = action;
+
+        InsCode = uInt8ToHexStr(InsCode);
+
+        const insObj = { $: { InsName, InsCode } };
+        if (type === "add") {
+          if (Ins) {
+            Ins.push(insObj);
+          } else {
+            payload.Ins = [insObj];
+          }
+        } else if (type === "remove") {
+          payload.Ins = payload.Ins.filter(
+            ({ $: { InsName } }) =>
+              removedInses.find((name) => name === InsName) === undefined
+          );
+        }
+      }
+
+      function dealPayLoad(haveReturn) {
+        const { type, data } = action;
+        let { PayLoadName, PayLoadCode, removedPayLoads } = data;
+
+        PayLoadCode = uInt8ToHexStr(PayLoadCode);
+        if (type === "add") {
+          if (haveReturn) {
+            const newDBItem = {
+              $: { PayLoadName, PayLoadCode }
+            };
+            let newXMLObj = { $: {}, DBItem: [XMLObj, newDBItem] };
+
+            return newXMLObj;
+          } else {
+            const newDBItem = {
+              $: { PayLoadName, PayLoadCode }
+            };
+            DBItem.push(newDBItem);
+          }
+        } else if (type === "remove") {
+          XMLObj.DBItem = XMLObj.DBItem.filter(
+            ({ $: { PayLoadName } }) =>
+              removedPayLoads.find((name) => name === PayLoadName) === undefined
+          );
+          if (XMLObj.DBItem.length === 1) {
+            XMLObj = XMLObj.DBItem[0];
+          }
+        }
+      }
+
+      const { DBItem, Ins = [] } = XMLObj;
+      // 如果是多负载
+      if (DBItem) {
+        const payload = DBItem.find(
+          (tPayload) => tPayload.$.PayLoadName === payloadName
+        );
+        if (insName) {
+          dealByte(payload);
+          setXMLObj({ ...XMLObj });
+        } else if (payloadName) {
+          dealIns(payload);
+          setXMLObj({ ...XMLObj });
+        } else {
+          dealPayLoad();
+          setXMLObj({ ...XMLObj });
+        }
+      }
+      // 如果是单负载
+      else if (Ins) {
+        if (insName) {
+          dealByte(XMLObj);
+          setXMLObj({ ...XMLObj });
+        } else if (payloadName) {
+          dealIns(XMLObj);
+          setXMLObj({ ...XMLObj });
+        } else {
+          setXMLObj(dealPayLoad(true));
+        }
+      }
+    },
+    [XMLObj]
+  );
   const generateBin = useCallback(() => {
     const haveRoot = result.payloads ? true : false;
     function getCodeFromPayload(payload) {
@@ -148,10 +290,9 @@ export function useDealXML(filePath) {
       const buffers = configs.map((config) => {
         const { code: cCode, componentTypes } = config;
 
-        // 1byte PayLoadCode + 1byte InsCode + 16byte ByteData + 16Byte md5
-        const buffer = new ArrayBuffer(34);
+        // 1byte PayLoadCode + 1byte InsCode + 16byte ByteData
+        const buffer = new ArrayBuffer(18);
         const view = new DataView(buffer);
-        const byteDataView = new Uint8Array(buffer, 2, 16);
 
         view.setInt8(0, parseInt(pCode, 16));
         view.setInt8(1, parseInt(cCode, 16));
@@ -175,11 +316,6 @@ export function useDealXML(filePath) {
               default:
             }
           });
-        const md5Str = md5(Buffer.from(byteDataView));
-        for (let i = 0; i < md5Str.length; i = i + 2) {
-          let value = parseInt(md5Str.substr(i, 2), 16);
-          view.setUint8(i / 2 + 18, value);
-        }
         return buffer;
       });
       return buffers;
@@ -212,22 +348,18 @@ export function useDealXML(filePath) {
   }, [filePath, read]);
 
   useEffect(() => {
-    const watcher = fsWatch(
-      filePath,
-      { persistent: false },
-      (eventType) => {
-        if (eventType === "change") {
-          read(filePath);
-        } else if (eventType === "rename") {
-          setDeleted(true);
-        }
+    const watcher = fsWatch(filePath, { persistent: false }, (eventType) => {
+      if (eventType === "change") {
+        read(filePath);
+      } else if (eventType === "rename") {
+        setDeleted(true);
       }
-    );
+    });
 
     return () => {
       watcher.close();
     };
   }, [filePath, read]);
 
-  return { ...result, deleted, saveXML, generateBin };
+  return { ...result, deleted, saveXML, generateBin, changeXMLObj };
 }
