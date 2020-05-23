@@ -6,7 +6,7 @@
         <Option Sel="0x00" Val="固定"/>
         <Option Sel="0x01" Val="帧间跳"/>
       </Byte>
-      <Byte ByteName="方位扫描中心" Type="Range" ByteStart="1" ByteEnd="2" Value="-154">
+      <Byte ByteName="方位扫描中心" Type="Range" ByteStart="1" ByteEnd="2" Value="1">
         <Range DataType="INT16" Precision="0.1" limit_lower="-180" limit_upper="180" Unit="度"/>
       </Byte>
     </Ins>
