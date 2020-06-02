@@ -856,7 +856,6 @@ export default forwardRef(function Configure(
         : null;
     }
     const fieldsValue = getFieldsValueRef.current();
-    if (!fieldsValue || Object.keys(fieldsValue).length === 0) return;
 
     const haveRoot = !!payloads;
     if (haveRoot) {

@@ -25,12 +25,17 @@ function createWindow() {
     // Open the DevTools.
     mainWindow.webContents.openDevTools();
     // Add React Devtools
-    BrowserWindow.addDevToolsExtension(
-      path.join(
-        os.homedir(),
-        "/AppData/Local/Google/Chrome/User Data/Default/Extensions/fmkadmapgofadopljbjfkapdkoienihi/4.6.0_0"
-      )
-    );
+    try {
+      // 引入Chrome插件React Devtools，因为别的设备上不一定有或者版本不同，所以需要用try catch包裹一下。
+      BrowserWindow.addDevToolsExtension(
+        path.join(
+          os.homedir(),
+          "/AppData/Local/Google/Chrome/User Data/Default/Extensions/fmkadmapgofadopljbjfkapdkoienihi/4.7.0_0"
+        )
+      );
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   changeMenu(mainWindow);
